@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CreateRouteImport } from './routes/create'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
+import { Route as TourSlugRouteImport } from './routes/tour.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -29,9 +31,19 @@ const CreateRoute = CreateRouteImport.update({
   path: '/create',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoRoute = DemoRouteImport.update({
   id: '/demo',
   path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TourSlugRoute = TourSlugRouteImport.update({
+  id: '/tour/$slug',
+  path: '/tour/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -39,34 +51,49 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/create': typeof CreateRoute
+  '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/tour/$slug': typeof TourSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/create': typeof CreateRoute
+  '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/tour/$slug': typeof TourSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/create': typeof CreateRoute
+  '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/tour/$slug': typeof TourSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/create' | '/demo'
+  fullPaths: '/' | '/auth' | '/create' | '/dashboard' | '/demo' | '/tour/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/create' | '/demo'
-  id: '__root__' | '/' | '/auth' | '/create' | '/demo'
+  to: '/' | '/auth' | '/create' | '/dashboard' | '/demo' | '/tour/$slug'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/create'
+    | '/dashboard'
+    | '/demo'
+    | '/tour/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   CreateRoute: typeof CreateRoute
+  DashboardRoute: typeof DashboardRoute
   DemoRoute: typeof DemoRoute
+  TourSlugRoute: typeof TourSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -92,11 +119,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo': {
       id: '/demo'
       path: '/demo'
       fullPath: '/demo'
       preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tour/$slug': {
+      id: '/tour/$slug'
+      path: '/tour/$slug'
+      fullPath: '/tour/$slug'
+      preLoaderRoute: typeof TourSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -106,7 +147,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   CreateRoute: CreateRoute,
+  DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
+  TourSlugRoute: TourSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
