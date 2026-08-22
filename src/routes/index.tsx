@@ -1,24 +1,257 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  Boxes,
+  Camera,
+  Check,
+  Compass,
+  Cpu,
+  Glasses,
+  Layers,
+  Link2,
+  Monitor,
+  Smartphone,
+  Sparkles,
+  Upload,
+} from "lucide-react";
+import demoPanorama from "@/assets/demo-panorama.jpg";
+import { Button } from "@/components/ui/button";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "RoomVerse AI — Turn Any Room Video Into an Immersive VR Tour" },
+      {
+        name: "description",
+        content:
+          "Upload a smartphone video and RoomVerse AI composites it into an interactive 360° virtual walkthrough with hotspots, room navigation and WebXR VR mode.",
+      },
+      { property: "og:title", content: "RoomVerse AI — Room Video to 360° VR Tour" },
+      {
+        property: "og:description",
+        content:
+          "AI keyframe analysis, camera-rotation tracking and 360° panorama compositing — straight from a phone video.",
+      },
+    ],
+  }),
+  component: Landing,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+const steps = [
+  {
+    icon: Camera,
+    title: "Capture",
+    body: "Walk slowly around the room and pan a full circle with your phone camera.",
+  },
+  {
+    icon: Cpu,
+    title: "Analyse",
+    body: "Keyframes are selected, blur and exposure scored, and camera rotation estimated per frame.",
+  },
+  {
+    icon: Layers,
+    title: "Composite",
+    body: "Frames are blended into equirectangular panoramas, one per detected space.",
+  },
+  {
+    icon: Glasses,
+    title: "Explore",
+    body: "Open the tour on desktop, mobile or a VR headset — and share it with one link.",
+  },
+];
+
+const features = [
+  {
+    icon: Sparkles,
+    title: "Honest reconstruction",
+    body: "Only what your camera saw is rendered. Uncaptured areas stay dark instead of being invented.",
+  },
+  {
+    icon: Compass,
+    title: "Camera-rotation tracking",
+    body: "Column-signature correlation estimates yaw between frames, so panoramas align without a tripod.",
+  },
+  {
+    icon: Boxes,
+    title: "Automatic room splitting",
+    body: "Sustained scene changes become separate spaces you can rename and connect.",
+  },
+  {
+    icon: Link2,
+    title: "Hotspots & share links",
+    body: "Drop info or navigation hotspots anywhere, then publish a private or public share link.",
+  },
+];
+
+function Landing() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main>
+      {/* Hero */}
+      <section className="grain relative overflow-hidden">
+        <div className="mx-auto grid max-w-7xl gap-14 px-5 py-20 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:py-28">
+          <div>
+            <p className="eyebrow">AI · Computer vision · WebXR</p>
+            <h1 className="mt-5 text-5xl leading-[1.05] sm:text-6xl lg:text-7xl">
+              Turn Any Room Video Into an{" "}
+              <span className="text-gold-gradient">Immersive VR Tour</span>
+            </h1>
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground">
+              Upload a simple smartphone video and let AI transform your space into an interactive
+              360° virtual walkthrough — with hotspots, room navigation and headset-ready VR.
+            </p>
+            <div className="mt-9 flex flex-wrap gap-3">
+              <Button variant="gold" size="xl" asChild>
+                <Link to="/create">
+                  <Upload className="mr-2 h-4 w-4" /> Upload video
+                </Link>
+              </Button>
+              <Button variant="outlineGold" size="xl" asChild>
+                <Link to="/create" search={{ record: true }}>
+                  <Camera className="mr-2 h-4 w-4" /> Record on phone
+                </Link>
+              </Button>
+              <Button variant="glass" size="xl" asChild>
+                <Link to="/demo">View demo tour</Link>
+              </Button>
+            </div>
+            <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-border pt-8">
+              {[
+                ["4K", "panorama canvas"],
+                ["< 2 min", "typical processing"],
+                ["WebXR", "headset ready"],
+              ].map(([value, label]) => (
+                <div key={label}>
+                  <dt className="font-display text-3xl text-primary">{value}</dt>
+                  <dd className="mt-1 text-xs text-muted-foreground">{label}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          <div className="relative">
+            <div className="animate-float overflow-hidden rounded-3xl border border-border shadow-luxe">
+              <img
+                src={demoPanorama}
+                alt="Equirectangular 360° panorama of a penthouse living room generated by RoomVerse AI"
+                width={1920}
+                height={960}
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <div className="absolute -bottom-6 left-6 right-6 glass-panel rounded-2xl px-5 py-4">
+              <p className="eyebrow">Live preview</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Penthouse Living Room · 360° captured · 3 hotspots
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="mx-auto max-w-7xl px-5 py-24">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="eyebrow">How it works</p>
+            <h2 className="mt-3 text-4xl">Four steps from clip to walkthrough</h2>
+          </div>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            The whole pipeline runs in your browser, so your footage never leaves your device until
+            you publish the finished panoramas.
+          </p>
+        </div>
+        <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {steps.map((step, index) => (
+            <article key={step.title} className="glass-panel group rounded-2xl p-6">
+              <div className="flex items-center justify-between">
+                <step.icon className="h-5 w-5 text-primary" />
+                <span className="font-mono text-xs text-muted-foreground">0{index + 1}</span>
+              </div>
+              <h3 className="mt-5 text-2xl">{step.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="mx-auto max-w-7xl px-5 pb-24">
+        <p className="eyebrow">Built for accuracy</p>
+        <h2 className="mt-3 max-w-2xl text-4xl">
+          A pipeline that tells you the truth about your capture
+        </h2>
+        <div className="mt-12 grid gap-6 md:grid-cols-2">
+          {features.map((feature) => (
+            <article
+              key={feature.title}
+              className="rounded-2xl border border-border bg-surface p-7 transition-colors hover:border-primary/40"
+            >
+              <feature.icon className="h-5 w-5 text-primary" />
+              <h3 className="mt-5 text-2xl">{feature.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feature.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Devices */}
+      <section className="mx-auto max-w-7xl px-5 pb-24">
+        <div className="glass-panel rounded-3xl p-8 sm:p-12">
+          <p className="eyebrow">Supported devices</p>
+          <h2 className="mt-3 text-4xl">Everywhere your visitors are</h2>
+          <div className="mt-10 grid gap-8 sm:grid-cols-3">
+            {[
+              { icon: Monitor, title: "Desktop", body: "Drag to look, scroll to zoom, fullscreen." },
+              { icon: Smartphone, title: "Mobile", body: "Touch panning with a gyro-friendly viewer." },
+              { icon: Glasses, title: "VR headsets", body: "WebXR immersive mode on Quest & compatible headsets." },
+            ].map((device) => (
+              <div key={device.title} className="flex gap-4">
+                <device.icon className="mt-1 h-5 w-5 shrink-0 text-primary" />
+                <div>
+                  <h3 className="text-xl">{device.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{device.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="mx-auto max-w-7xl px-5 pb-24">
+        <div className="text-center">
+          <p className="eyebrow">Pricing</p>
+          <h2 className="mt-3 text-4xl">Simple while we're in preview</h2>
+        </div>
+        <div className="mt-12 grid gap-6 lg:grid-cols-3">
+          {[
+            { name: "Studio Free", price: "$0", items: ["3 tours", "Unlimited hotspots", "Public share links", "VR mode"], featured: false },
+            { name: "Studio Pro", price: "Coming soon", items: ["Unlimited tours", "Custom branding", "Private tours", "Priority processing"], featured: true },
+            { name: "Agency", price: "Talk to us", items: ["Team workspaces", "Bulk capture", "White-label viewer", "API access"], featured: false },
+          ].map((plan) => (
+            <article
+              key={plan.name}
+              className={
+                plan.featured
+                  ? "rounded-2xl border border-primary/50 bg-surface-raised p-8 shadow-gold"
+                  : "rounded-2xl border border-border bg-surface p-8"
+              }
+            >
+              <p className="eyebrow">{plan.name}</p>
+              <p className="mt-3 font-display text-4xl">{plan.price}</p>
+              <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
+                {plan.items.map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-primary" /> {item}
+                  </li>
+                ))}
+              </ul>
+              <Button variant={plan.featured ? "gold" : "glass"} className="mt-8 w-full" asChild>
+                <Link to="/create">Start capturing</Link>
+              </Button>
+            </article>
+          ))}
+        </div>
+      </section>
+    </main>
   );
 }
