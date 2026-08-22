@@ -14,7 +14,170 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      hotspots: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          kind: string
+          link_url: string | null
+          pitch: number
+          room_id: string
+          target_room_id: string | null
+          title: string
+          yaw: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          link_url?: string | null
+          pitch?: number
+          room_id: string
+          target_room_id?: string | null
+          title?: string
+          yaw?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          link_url?: string | null
+          pitch?: number
+          room_id?: string
+          target_room_id?: string | null
+          title?: string
+          yaw?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotspots_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "tour_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotspots_target_room_id_fkey"
+            columns: ["target_room_id"]
+            isOneToOne: false
+            referencedRelation: "tour_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      tour_rooms: {
+        Row: {
+          coverage_degrees: number | null
+          created_at: string
+          frame_count: number | null
+          id: string
+          name: string
+          panorama_url: string
+          position: number
+          tour_id: string
+        }
+        Insert: {
+          coverage_degrees?: number | null
+          created_at?: string
+          frame_count?: number | null
+          id?: string
+          name?: string
+          panorama_url: string
+          position?: number
+          tour_id: string
+        }
+        Update: {
+          coverage_degrees?: number | null
+          created_at?: string
+          frame_count?: number | null
+          id?: string
+          name?: string
+          panorama_url?: string
+          position?: number
+          tour_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_rooms_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tours: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_public: boolean
+          quality_report: Json
+          share_slug: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          video_duration: number | null
+          video_size: number | null
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          quality_report?: Json
+          share_slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+          video_duration?: number | null
+          video_size?: number | null
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          quality_report?: Json
+          share_slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          video_duration?: number | null
+          video_size?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
