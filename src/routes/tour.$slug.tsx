@@ -41,7 +41,7 @@ export const Route = createFileRoute("/tour/$slug")({
       },
     ],
   }),
-  component: TourPage;
+  component: TourPage,
 });
 
 function TourPage() {
