@@ -100,7 +100,14 @@ function CreatePage() {
   const [checking, setChecking] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [progress, setProgress] = useState<Progress | null>(null);
+  const [progress, setProgress] = useState<{ stage: UiStage; percent: number; message: string } | null>(
+    null,
+  );
+  const [review, setReview] = useState<{ result: PipelineResult; ai: AiPreview } | null>(null);
+  const [useAi, setUseAi] = useState(true);
+  const [previews, setPreviews] = useState<{ raw: string[]; ai: (string | null)[] }>({ raw: [], ai: [] });
+  const [activeRoom, setActiveRoom] = useState(0);
+
   const [dragOver, setDragOver] = useState(false);
   const [recording, setRecording] = useState(false);
 
