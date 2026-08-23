@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { ClientOnly } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -9,18 +10,23 @@ import {
   Circle,
   Film,
   Loader2,
+  Sparkles,
   Square,
   Upload,
   Video,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { processVideo, prescreen, type Progress, type Stage } from "@/lib/pipeline";
-import { saveTour } from "@/lib/tours";
+import { processVideo, prescreen, type Progress, type Stage, type PipelineResult } from "@/lib/pipeline";
+import { saveTour, type Room } from "@/lib/tours";
+import { refinePanorama, narrateWalkthrough } from "@/lib/ai.functions";
+import { blobToDataUrl, toEquirectangularBlob } from "@/lib/ai-preview";
+import PanoramaViewer from "@/components/PanoramaViewer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress as ProgressBar } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/create")({
@@ -31,27 +37,42 @@ export const Route = createFileRoute("/create")({
       {
         name: "description",
         content:
-          "Upload or record a room video, run the RoomVerse capture-quality check, and generate an interactive 360° virtual tour.",
+          "Upload or record a room video, run the RoomVerse capture-quality check, and generate an AI-refined interactive 360° virtual tour.",
       },
       { property: "og:title", content: "Create a 360° Tour — RoomVerse AI" },
       {
         property: "og:description",
-        content: "Upload MP4, MOV or WebM footage and build an immersive walkthrough in minutes.",
+        content: "Upload MP4, MOV or WebM footage and build an AI-refined immersive walkthrough in minutes.",
       },
     ],
   }),
   component: CreatePage,
 });
 
-const STAGES: { key: Stage; label: string }[] = [
+type UiStage = Stage | "ai";
+
+const STAGES: { key: UiStage; label: string }[] = [
   { key: "decode", label: "Video uploaded" },
   { key: "keyframes", label: "Extracting key frames" },
   { key: "tracking", label: "Analysing camera movement" },
   { key: "segmentation", label: "Detecting room transitions" },
   { key: "panorama", label: "Compositing 360° panoramas" },
   { key: "optimize", label: "Optimising for VR" },
+  { key: "ai", label: "AI refining the walkthrough" },
   { key: "publish", label: "Creating virtual tour" },
 ];
+
+interface AiPreview {
+  refined: (Blob | null)[];
+  narrative: {
+    title: string;
+    description: string;
+    rooms: { name: string; caption: string }[];
+    tips: string[];
+  } | null;
+  failure: string | null;
+}
+
 
 const TIPS = [
   "Walk slowly and keep the camera at chest height.",
