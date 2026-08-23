@@ -175,6 +175,54 @@ function CreatePage() {
     setRecording(false);
   };
 
+  const runAi = async (result: PipelineResult): Promise<AiPreview> => {
+    const rooms = result.rooms.slice(0, 4);
+    const refined: (Blob | null)[] = result.rooms.map(() => null);
+    let failure: string | null = null;
+
+    for (let i = 0; i < rooms.length; i++) {
+      setProgress({
+        stage: "ai",
+        percent: 84 + (i / Math.max(1, rooms.length)) * 10,
+        message: `AI refining panorama ${i + 1} of ${rooms.length}…`,
+      });
+      try {
+        const image = await blobToDataUrl(rooms[i].blob);
+        const out = await refinePanorama({
+          data: {
+            image,
+            roomName: rooms[i].name,
+            coverageDegrees: rooms[i].coverageDegrees,
+          },
+        });
+        refined[i] = await toEquirectangularBlob(out.image);
+      } catch (error) {
+        failure = error instanceof Error ? error.message : "AI refinement failed.";
+        break;
+      }
+    }
+
+    let narrative: AiPreview["narrative"] = null;
+    if (!failure) {
+      setProgress({ stage: "ai", percent: 94, message: "AI writing your walkthrough copy…" });
+      try {
+        narrative = await narrateWalkthrough({
+          data: {
+            fileName: file?.name ?? "capture.mp4",
+            coverageDegrees: result.report.coverageDegrees,
+            score: result.report.score,
+            issues: result.report.issues,
+            rooms: result.rooms.map((r) => ({ name: r.name, coverageDegrees: r.coverageDegrees })),
+          },
+        });
+      } catch (error) {
+        failure = error instanceof Error ? error.message : "AI copywriting failed.";
+      }
+    }
+
+    return { refined, narrative, failure };
+  };
+
   const generate = async () => {
     if (!file) return;
     if (!user) {
@@ -184,27 +232,79 @@ function CreatePage() {
     }
     setProgress({ stage: "decode", percent: 2, message: "Starting pipeline…" });
     try {
-      const result = await processVideo(file, setProgress);
-      const tour = await saveTour({
-        userId: user.id,
-        title: title.trim() || "Untitled Tour",
-        description: description.trim(),
-        file,
-        result,
+      const result = await processVideo(file, (p: Progress) => setProgress(p));
+      const ai = await runAi(result);
+
+      previews.raw.forEach((url) => URL.revokeObjectURL(url));
+      previews.ai.forEach((url) => url && URL.revokeObjectURL(url));
+      setPreviews({
+        raw: result.rooms.map((r) => URL.createObjectURL(r.blob)),
+        ai: ai.refined.map((blob) => (blob ? URL.createObjectURL(blob) : null)),
       });
-      toast.success("Your virtual tour is ready.");
-      navigate({ to: "/tour/$slug", params: { slug: tour.share_slug } });
+
+      if (ai.narrative) {
+        setTitle((current) => (current.trim() ? current : ai.narrative!.title));
+        setDescription((current) => (current.trim() ? current : ai.narrative!.description));
+      }
+      if (ai.failure) toast.warning(`AI preview unavailable: ${ai.failure}`);
+      setUseAi(!ai.failure && ai.refined.some(Boolean));
+      setActiveRoom(0);
+      setReview({ result, ai });
+      setProgress(null);
     } catch (error) {
       setProgress(null);
       toast.error(error instanceof Error ? error.message : "Processing failed.");
     }
   };
 
+  const publish = async () => {
+    if (!review || !file || !user) return;
+    const { result, ai } = review;
+    setProgress({ stage: "publish", percent: 97, message: "Publishing your walkthrough…" });
+    try {
+      const tour = await saveTour({
+        userId: user.id,
+        title: title.trim() || ai.narrative?.title || "Untitled Tour",
+        description: description.trim(),
+        file,
+        result: {
+          ...result,
+          rooms: result.rooms.map((room, index) => ({
+            ...room,
+            name: ai.narrative?.rooms[index]?.name || room.name,
+            blob: useAi && ai.refined[index] ? ai.refined[index]! : room.blob,
+          })),
+        },
+      });
+      toast.success("Your virtual tour is ready.");
+      navigate({ to: "/tour/$slug", params: { slug: tour.share_slug } });
+    } catch (error) {
+      setProgress(null);
+      toast.error(error instanceof Error ? error.message : "Publishing failed.");
+    }
+  };
+
   const currentIndex = progress ? STAGES.findIndex((s) => s.key === progress.stage) : -1;
+
+  const reviewRooms: Room[] = (review?.result.rooms ?? []).map((room, index) => ({
+    id: String(index),
+    name: review?.ai.narrative?.rooms[index]?.name || room.name,
+    panorama_url: "",
+    position: index,
+    coverage_degrees: room.coverageDegrees,
+    frame_count: room.frameCount,
+  }));
+
+  const reviewUrls: Record<string, string> = {};
+  reviewRooms.forEach((room, index) => {
+    const url = useAi ? previews.ai[index] ?? previews.raw[index] : previews.raw[index];
+    if (url) reviewUrls[room.id] = url;
+  });
 
   if (loading) {
     return (
       <main className="flex min-h-[60vh] items-center justify-center">
+
         <Loader2 className="h-5 w-5 animate-spin text-primary" />
       </main>
     );
