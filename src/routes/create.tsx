@@ -387,7 +387,92 @@ function CreatePage() {
             </div>
           </div>
         </section>
+      ) : review ? (
+        <section className="mt-10 space-y-8">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="eyebrow">AI walkthrough preview</p>
+              <h2 className="mt-2 text-3xl">Step inside before you publish</h2>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                {review.ai.failure
+                  ? `Showing your raw stitched panoramas — ${review.ai.failure}`
+                  : "AI closed the seams and completed the ceiling and floor bands. Toggle it off to compare with the raw stitch."}
+              </p>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm">AI refined</span>
+              <Switch
+                checked={useAi}
+                disabled={!review.ai.refined.some(Boolean)}
+                onCheckedChange={setUseAi}
+              />
+            </div>
+          </div>
+
+          <ClientOnly fallback={<div className="h-[58vh] rounded-2xl border border-border bg-surface" />}>
+            {reviewRooms.length > 0 && (
+              <PanoramaViewer
+                rooms={reviewRooms}
+                panoramaUrls={reviewUrls}
+                hotspots={[]}
+                activeRoomId={String(activeRoom)}
+                onRoomChange={(id) => setActiveRoom(Number(id))}
+              />
+            )}
+          </ClientOnly>
+
+          {review.ai.narrative?.rooms.some((room) => room.caption) && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {review.ai.narrative.rooms.map((room, index) => (
+                <div key={`${room.name}-${index}`} className="rounded-xl border border-border bg-surface p-4">
+                  <p className="eyebrow">{room.name}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{room.caption}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {review.ai.narrative?.tips.length ? (
+            <div className="glass-panel rounded-2xl p-6">
+              <p className="eyebrow">AI capture coaching</p>
+              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                {review.ai.narrative.tips.map((tip) => (
+                  <li key={tip} className="flex gap-3">
+                    <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <div className="space-y-4 rounded-2xl border border-border bg-surface p-6">
+            <div className="space-y-2">
+              <Label htmlFor="review-title">Tour title</Label>
+              <Input id="review-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="review-description">Description</Label>
+              <Textarea
+                id="review-description"
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="gold" size="lg" onClick={publish}>
+                Publish walkthrough
+              </Button>
+              <Button variant="glass" size="lg" onClick={() => setReview(null)}>
+                Start over
+              </Button>
+            </div>
+          </div>
+        </section>
       ) : (
+
         <section className="mt-10 grid gap-8 lg:grid-cols-[1.15fr_1fr]">
           <div>
             <div
