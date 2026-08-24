@@ -66,6 +66,51 @@ export const refinePanorama = createServerFn({ method: "POST" })
   });
 
 /**
+ * Estimates a grayscale equirectangular depth map for a panorama so the viewer
+ * can displace the sphere and render a genuinely volumetric 3D 360° preview
+ * (parallax on desktop, room-scale depth in VR).
+ */
+export const depthMapPanorama = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => refineInput.parse(data))
+  .handler(async ({ data }) => {
+    const { callGateway, extractImage, AiGatewayError } = await import("@/lib/ai-gateway.server");
+
+    const prompt = [
+      "This is a 2:1 equirectangular 360° panorama of an indoor space.",
+      `Room: "${data.roomName}", roughly ${Math.round(data.coverageDegrees)}° covered.`,
+      "Generate its DEPTH MAP as an image with the exact same 2:1 equirectangular framing and alignment:",
+      "- pure grayscale, no colour, no text, no border",
+      "- near surfaces (furniture, foreground walls) bright white; far surfaces and open space dark",
+      "- smooth gradients across flat walls, crisp edges at object boundaries",
+      "- floor gets a smooth gradient from bright at the bottom to darker towards the horizon",
+      "- keep every pixel aligned with the same feature in the input panorama",
+      "Output the depth image only.",
+    ].join("\n");
+
+    try {
+      const payload = await callGateway({
+        model: "google/gemini-2.5-flash-image",
+        modalities: ["image", "text"],
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: data.image } },
+            ],
+          },
+        ],
+      });
+      return { depth: extractImage(payload) };
+    } catch (error) {
+      if (error instanceof AiGatewayError) throw new Error(error.message);
+      throw error;
+    }
+  });
+
+
+/**
  * Writes the listing copy for the walkthrough: title, description, per-room
  * captions and capture advice, grounded in the measured quality report.
  */
