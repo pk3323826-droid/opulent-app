@@ -274,6 +274,12 @@ export default function PanoramaViewer({
 
   const handlePointerMove = (event: React.PointerEvent) => {
     const s = stateRef.current;
+    const mount = mountRef.current;
+    if (mount) {
+      const rect = mount.getBoundingClientRect();
+      s.parallaxX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      s.parallaxY = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+    }
     if (!s.dragging) return;
     const dx = event.clientX - s.px;
     const dy = event.clientY - s.py;
@@ -283,6 +289,7 @@ export default function PanoramaViewer({
     s.px = event.clientX;
     s.py = event.clientY;
   };
+
 
   const handlePointerUp = (event: React.PointerEvent) => {
     const s = stateRef.current;
