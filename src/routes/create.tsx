@@ -18,7 +18,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { processVideo, prescreen, type Progress, type Stage, type PipelineResult } from "@/lib/pipeline";
 import { saveTour, type Room } from "@/lib/tours";
-import { refinePanorama, narrateWalkthrough } from "@/lib/ai.functions";
+import { refinePanorama, narrateWalkthrough, depthMapPanorama } from "@/lib/ai.functions";
 import { blobToDataUrl, toEquirectangularBlob } from "@/lib/ai-preview";
 import PanoramaViewer from "@/components/PanoramaViewer";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ export const Route = createFileRoute("/create")({
   component: CreatePage,
 });
 
-type UiStage = Stage | "ai";
+type UiStage = Stage | "ai" | "depth";
 
 const STAGES: { key: UiStage; label: string }[] = [
   { key: "decode", label: "Video uploaded" },
@@ -59,11 +59,15 @@ const STAGES: { key: UiStage; label: string }[] = [
   { key: "panorama", label: "Compositing 360° panoramas" },
   { key: "optimize", label: "Optimising for VR" },
   { key: "ai", label: "AI refining the walkthrough" },
+  { key: "depth", label: "AI estimating 3D depth" },
   { key: "publish", label: "Creating virtual tour" },
 ];
 
 interface AiPreview {
   refined: (Blob | null)[];
+  /** AI depth maps (data URLs) that drive the volumetric 3D preview. */
+  depth: (string | null)[];
+
   narrative: {
     title: string;
     description: string;
@@ -178,27 +182,51 @@ function CreatePage() {
   const runAi = async (result: PipelineResult): Promise<AiPreview> => {
     const rooms = result.rooms.slice(0, 4);
     const refined: (Blob | null)[] = result.rooms.map(() => null);
+    const depth: (string | null)[] = result.rooms.map(() => null);
     let failure: string | null = null;
 
     for (let i = 0; i < rooms.length; i++) {
       setProgress({
         stage: "ai",
-        percent: 84 + (i / Math.max(1, rooms.length)) * 10,
+        percent: 80 + (i / Math.max(1, rooms.length)) * 6,
         message: `AI refining panorama ${i + 1} of ${rooms.length}…`,
       });
+      const room = rooms[i]!;
+      let source: string;
       try {
-        const image = await blobToDataUrl(rooms[i].blob);
+        source = await blobToDataUrl(room.blob);
         const out = await refinePanorama({
           data: {
-            image,
-            roomName: rooms[i].name,
-            coverageDegrees: rooms[i].coverageDegrees,
+            image: source,
+            roomName: room.name,
+            coverageDegrees: room.coverageDegrees,
           },
         });
-        refined[i] = await toEquirectangularBlob(out.image);
+        const blob = await toEquirectangularBlob(out.image);
+        refined[i] = blob;
+        source = await blobToDataUrl(blob, 1536);
       } catch (error) {
         failure = error instanceof Error ? error.message : "AI refinement failed.";
         break;
+      }
+
+      // Depth estimation turns the flat sphere into a volumetric 3D 360° preview.
+      setProgress({
+        stage: "depth",
+        percent: 86 + (i / Math.max(1, rooms.length)) * 6,
+        message: `AI building 3D depth for ${room.name}…`,
+      });
+      try {
+        const out = await depthMapPanorama({
+          data: {
+            image: source,
+            roomName: room.name,
+            coverageDegrees: room.coverageDegrees,
+          },
+        });
+        depth[i] = out.depth;
+      } catch {
+        depth[i] = null;
       }
     }
 
@@ -220,7 +248,9 @@ function CreatePage() {
       }
     }
 
-    return { refined, narrative, failure };
+
+
+    return { refined, depth, narrative, failure };
   };
 
   const generate = async () => {
@@ -299,6 +329,11 @@ function CreatePage() {
   reviewRooms.forEach((room, index) => {
     const url = useAi ? previews.ai[index] ?? previews.raw[index] : previews.raw[index];
     if (url) reviewUrls[room.id] = url;
+  });
+
+  const reviewDepth: Record<string, string | null> = {};
+  reviewRooms.forEach((room, index) => {
+    reviewDepth[room.id] = useAi ? review?.ai.depth[index] ?? null : null;
   });
 
   if (loading) {
@@ -415,6 +450,7 @@ function CreatePage() {
               <PanoramaViewer
                 rooms={reviewRooms}
                 panoramaUrls={reviewUrls}
+                depthUrls={reviewDepth}
                 hotspots={[]}
                 activeRoomId={String(activeRoom)}
                 onRoomChange={(id) => setActiveRoom(Number(id))}
