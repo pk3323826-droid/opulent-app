@@ -181,27 +181,50 @@ function CreatePage() {
   const runAi = async (result: PipelineResult): Promise<AiPreview> => {
     const rooms = result.rooms.slice(0, 4);
     const refined: (Blob | null)[] = result.rooms.map(() => null);
+    const depth: (string | null)[] = result.rooms.map(() => null);
     let failure: string | null = null;
 
     for (let i = 0; i < rooms.length; i++) {
       setProgress({
         stage: "ai",
-        percent: 84 + (i / Math.max(1, rooms.length)) * 10,
+        percent: 80 + (i / Math.max(1, rooms.length)) * 6,
         message: `AI refining panorama ${i + 1} of ${rooms.length}…`,
       });
+      let source: string;
       try {
-        const image = await blobToDataUrl(rooms[i].blob);
+        source = await blobToDataUrl(rooms[i].blob);
         const out = await refinePanorama({
           data: {
-            image,
+            image: source,
             roomName: rooms[i].name,
             coverageDegrees: rooms[i].coverageDegrees,
           },
         });
-        refined[i] = await toEquirectangularBlob(out.image);
+        const blob = await toEquirectangularBlob(out.image);
+        refined[i] = blob;
+        source = await blobToDataUrl(blob, 1536);
       } catch (error) {
         failure = error instanceof Error ? error.message : "AI refinement failed.";
         break;
+      }
+
+      // Depth estimation turns the flat sphere into a volumetric 3D 360° preview.
+      setProgress({
+        stage: "depth",
+        percent: 86 + (i / Math.max(1, rooms.length)) * 6,
+        message: `AI building 3D depth for ${rooms[i].name}…`,
+      });
+      try {
+        const out = await depthMapPanorama({
+          data: {
+            image: source,
+            roomName: rooms[i].name,
+            coverageDegrees: rooms[i].coverageDegrees,
+          },
+        });
+        depth[i] = out.depth;
+      } catch {
+        depth[i] = null;
       }
     }
 
@@ -222,6 +245,8 @@ function CreatePage() {
         failure = error instanceof Error ? error.message : "AI copywriting failed.";
       }
     }
+
+
 
     return { refined, narrative, failure };
   };
