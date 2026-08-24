@@ -65,6 +65,7 @@ const PANO_FRAGMENT = /* glsl */ `
 export default function PanoramaViewer({
   rooms,
   panoramaUrls,
+  depthUrls,
   hotspots,
   activeRoomId,
   onRoomChange,
@@ -81,10 +82,13 @@ export default function PanoramaViewer({
     moved: false,
     px: 0,
     py: 0,
+    parallaxX: 0,
+    parallaxY: 0,
+    depth3d: false,
   });
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const materialRef = useRef<THREE.MeshBasicMaterial | null>(null);
+  const materialRef = useRef<THREE.ShaderMaterial | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [placed, setPlaced] = useState<Placed[]>([]);
@@ -92,7 +96,9 @@ export default function PanoramaViewer({
   const [vrSupported, setVrSupported] = useState(false);
   const [heading, setHeading] = useState(0);
   const [placing, setPlacing] = useState(false);
+  const [depth3d, setDepth3d] = useState(true);
 
+  const depthUrl = depthUrls?.[activeRoomId] ?? null;
   const roomHotspots = useMemo(
     () => hotspots.filter((h) => h.room_id === activeRoomId),
     [hotspots, activeRoomId],
@@ -113,9 +119,21 @@ export default function PanoramaViewer({
     renderer.xr.enabled = true;
     mount.appendChild(renderer.domElement);
 
-    const geometry = new THREE.SphereGeometry(500, 64, 40);
+    // Dense sphere so the AI depth map can actually reshape the room in 3D.
+    const geometry = new THREE.SphereGeometry(500, 240, 140);
     geometry.scale(-1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({ color: 0x111318 });
+    const material = new THREE.ShaderMaterial({
+      vertexShader: PANO_VERTEX,
+      fragmentShader: PANO_FRAGMENT,
+      side: THREE.FrontSide,
+      uniforms: {
+        uMap: { value: null },
+        uDepth: { value: new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1) },
+        uHasMap: { value: 0 },
+        uDepthAmount: { value: 0 },
+      },
+    });
+    (material.uniforms['uDepth']!.value as THREE.DataTexture).needsUpdate = true;
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
@@ -139,6 +157,10 @@ export default function PanoramaViewer({
         target.setFromSphericalCoords(500, phi, theta);
         camera.fov = s.fov;
         camera.updateProjectionMatrix();
+        // Off-centre the eye so the depth-displaced geometry produces parallax.
+        const amount = s.depth3d ? 26 : 0;
+        camera.position.x += (s.parallaxX * amount - camera.position.x) * 0.08;
+        camera.position.y += (s.parallaxY * amount - camera.position.y) * 0.08;
         camera.lookAt(target);
       }
       renderer.render(scene, camera);
@@ -190,11 +212,9 @@ export default function PanoramaViewer({
       url,
       (texture) => {
         texture.colorSpace = THREE.SRGBColorSpace;
-        texture.mapping = THREE.EquirectangularReflectionMapping;
-        material.map?.dispose();
-        material.map = texture;
-        material.color.set(0xffffff);
-        material.needsUpdate = true;
+        (material.uniforms['uMap']!.value as THREE.Texture | null)?.dispose();
+        material.uniforms['uMap']!.value = texture;
+        material.uniforms['uHasMap']!.value = 1;
         stateRef.current.lon = 0;
         stateRef.current.lat = 0;
         setLoading(false);
@@ -203,6 +223,28 @@ export default function PanoramaViewer({
       () => setLoading(false),
     );
   }, [activeRoomId, panoramaUrls]);
+
+  // Load the AI depth map for this room and drive the 3D displacement.
+  useEffect(() => {
+    const material = materialRef.current;
+    if (!material) return;
+    if (!depthUrl) {
+      material.uniforms['uDepthAmount']!.value = 0;
+      stateRef.current.depth3d = false;
+      return;
+    }
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin("anonymous");
+    loader.load(depthUrl, (texture) => {
+      texture.colorSpace = THREE.NoColorSpace;
+      const previous = material.uniforms['uDepth']!.value as THREE.Texture | null;
+      previous?.dispose();
+      material.uniforms['uDepth']!.value = texture;
+      material.uniforms['uDepthAmount']!.value = depth3d ? 0.35 : 0;
+      stateRef.current.depth3d = depth3d;
+    });
+  }, [depthUrl, depth3d]);
+
 
   const pointerToAngles = (clientX: number, clientY: number) => {
     const camera = cameraRef.current;
