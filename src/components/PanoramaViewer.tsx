@@ -416,6 +416,11 @@ export default function PanoramaViewer({
               {placing ? "Click the view…" : "Add hotspot"}
             </Button>
           )}
+          {depthUrl && (
+            <Button size="sm" variant={depth3d ? "gold" : "glass"} onClick={() => setDepth3d((v) => !v)}>
+              <Boxes className="mr-1.5 h-3.5 w-3.5" /> {depth3d ? "3D depth on" : "3D depth off"}
+            </Button>
+          )}
           <Button size="sm" variant="glass" onClick={goFullscreen}>
             <Maximize2 className="mr-1.5 h-3.5 w-3.5" /> Fullscreen
           </Button>
