@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import {
+  Boxes,
   Compass,
   Glasses,
   Loader2,
@@ -17,6 +18,8 @@ import { cn } from "@/lib/utils";
 interface Props {
   rooms: Room[];
   panoramaUrls: Record<string, string>;
+  /** Optional AI depth maps (grayscale equirectangular) keyed by room id — enables 3D parallax. */
+  depthUrls?: Record<string, string | null>;
   hotspots: Hotspot[];
   activeRoomId: string;
   onRoomChange: (id: string) => void;
@@ -33,6 +36,31 @@ interface Placed {
 }
 
 const DEG = Math.PI / 180;
+
+const PANO_VERTEX = /* glsl */ `
+  varying vec2 vUv;
+  uniform sampler2D uDepth;
+  uniform float uDepthAmount;
+  void main() {
+    vUv = uv;
+    float depth = texture2D(uDepth, uv).r;
+    // Bright = near: pull those vertices towards the viewer for real parallax.
+    float scale = 1.0 - uDepthAmount * clamp(depth, 0.0, 1.0);
+    vec3 displaced = position * scale;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
+  }
+`;
+
+const PANO_FRAGMENT = /* glsl */ `
+  varying vec2 vUv;
+  uniform sampler2D uMap;
+  uniform float uHasMap;
+  void main() {
+    vec3 color = mix(vec3(0.067, 0.075, 0.094), texture2D(uMap, vUv).rgb, uHasMap);
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
+
 
 export default function PanoramaViewer({
   rooms,
