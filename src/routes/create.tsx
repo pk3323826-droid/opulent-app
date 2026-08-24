@@ -191,14 +191,15 @@ function CreatePage() {
         percent: 80 + (i / Math.max(1, rooms.length)) * 6,
         message: `AI refining panorama ${i + 1} of ${rooms.length}…`,
       });
+      const room = rooms[i]!;
       let source: string;
       try {
-        source = await blobToDataUrl(rooms[i].blob);
+        source = await blobToDataUrl(room.blob);
         const out = await refinePanorama({
           data: {
             image: source,
-            roomName: rooms[i].name,
-            coverageDegrees: rooms[i].coverageDegrees,
+            roomName: room.name,
+            coverageDegrees: room.coverageDegrees,
           },
         });
         const blob = await toEquirectangularBlob(out.image);
@@ -213,14 +214,14 @@ function CreatePage() {
       setProgress({
         stage: "depth",
         percent: 86 + (i / Math.max(1, rooms.length)) * 6,
-        message: `AI building 3D depth for ${rooms[i].name}…`,
+        message: `AI building 3D depth for ${room.name}…`,
       });
       try {
         const out = await depthMapPanorama({
           data: {
             image: source,
-            roomName: rooms[i].name,
-            coverageDegrees: rooms[i].coverageDegrees,
+            roomName: room.name,
+            coverageDegrees: room.coverageDegrees,
           },
         });
         depth[i] = out.depth;
