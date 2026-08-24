@@ -18,7 +18,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { processVideo, prescreen, type Progress, type Stage, type PipelineResult } from "@/lib/pipeline";
 import { saveTour, type Room } from "@/lib/tours";
-import { refinePanorama, narrateWalkthrough } from "@/lib/ai.functions";
+import { refinePanorama, narrateWalkthrough, depthMapPanorama } from "@/lib/ai.functions";
 import { blobToDataUrl, toEquirectangularBlob } from "@/lib/ai-preview";
 import PanoramaViewer from "@/components/PanoramaViewer";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ export const Route = createFileRoute("/create")({
   component: CreatePage,
 });
 
-type UiStage = Stage | "ai";
+type UiStage = Stage | "ai" | "depth";
 
 const STAGES: { key: UiStage; label: string }[] = [
   { key: "decode", label: "Video uploaded" },
@@ -59,6 +59,7 @@ const STAGES: { key: UiStage; label: string }[] = [
   { key: "panorama", label: "Compositing 360° panoramas" },
   { key: "optimize", label: "Optimising for VR" },
   { key: "ai", label: "AI refining the walkthrough" },
+  { key: "depth", label: "AI estimating 3D depth" },
   { key: "publish", label: "Creating virtual tour" },
 ];
 
@@ -329,6 +330,11 @@ function CreatePage() {
     if (url) reviewUrls[room.id] = url;
   });
 
+  const reviewDepth: Record<string, string | null> = {};
+  reviewRooms.forEach((room, index) => {
+    reviewDepth[room.id] = useAi ? review?.ai.depth[index] ?? null : null;
+  });
+
   if (loading) {
     return (
       <main className="flex min-h-[60vh] items-center justify-center">
@@ -443,6 +449,7 @@ function CreatePage() {
               <PanoramaViewer
                 rooms={reviewRooms}
                 panoramaUrls={reviewUrls}
+                depthUrls={reviewDepth}
                 hotspots={[]}
                 activeRoomId={String(activeRoom)}
                 onRoomChange={(id) => setActiveRoom(Number(id))}
