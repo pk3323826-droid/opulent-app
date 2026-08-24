@@ -248,7 +248,7 @@ function CreatePage() {
 
 
 
-    return { refined, narrative, failure };
+    return { refined, depth, narrative, failure };
   };
 
   const generate = async () => {
