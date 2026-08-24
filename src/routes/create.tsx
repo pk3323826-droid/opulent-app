@@ -64,6 +64,9 @@ const STAGES: { key: UiStage; label: string }[] = [
 
 interface AiPreview {
   refined: (Blob | null)[];
+  /** AI depth maps (data URLs) that drive the volumetric 3D preview. */
+  depth: (string | null)[];
+
   narrative: {
     title: string;
     description: string;
